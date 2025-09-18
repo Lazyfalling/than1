@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比大小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: linear-gradient(90deg, #ff6b6b 50%, #4ecdc4 50%);
+        }
+        
+        /* 进度条容器 */
+        .progress-container {
+            width: 100%;
+            padding: 15px 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background-color: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            display: flex;
+            gap: 2px;
+            padding: 2px;
+        }
+        
+        .progress-block {
+            flex: 1;
+            background-color: #ffffff;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .progress-block.filled {
+            background-color: #4CAF50;
+        }
+        
+        /* 游戏主容器 */
+        .game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+        
+        /* 卡片区域 */
+        .cards-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        /* 卡片样式 */
+        .card {
+            width: 150px;
+            height: 200px;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease;
+        }
+        
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 72px;
+            font-weight: bold;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card-back {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border: 3px solid #ddd;
+        }
+        
+        .card-front {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            transform: rotateY(180deg);
+            border: 3px solid #ff6b6b;
+        }
+        
+        /* 符号选择器 */
+        .symbol-selector {
+            width: 80px;
+            height: 80px;
+            background-color: white;
+            border: 3px solid #333;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+            touch-action: manipulation;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 按钮样式 */
+        .button {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .flip-button {
+            background-color: #2196F3;
+        }
+        
+        .flip-button:hover {
+            background-color: #0b7dda;
+        }
+        
+        .submit-button {
+            background-color: #ff9800;
+        }
+        
+        .submit-button:hover {
+            background-color: #e68900;
+        }
+        
+        .reset-button {
+            background-color: #f44336;
+        }
+        
+        .reset-button:hover {
+            background-color: #da190b;
+        }
+        
+        /* 结算弹窗 */
+        .result-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            display: none;
+        }
+        
+        .result-content {
+            background-color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: bounceIn 0.6s ease;
+        }
+        
+        .result-content h2 {
+            font-size: 36px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        
+        /* 动画效果 */
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        /* 粒子动画容器 */
+        #particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 99;
+            display: none;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .card {
+                width: 120px;
+                height: 160px;
+            }
+            
+            .cards-container {
+                gap: 20px;
+            }
+            
+            .card-front, .card-back {
+                font-size: 56px;
+            }
+            
+            .symbol-selector {
+                width: 60px;
+                height: 60px;
+                font-size: 36px;
+            }
+            
+            .button {
+                padding: 12px 24px;
+                font-size: 16px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .card {
+                width: 100px;
+                height: 140px;
+            }
+            
+            .cards-container {
+                gap: 15px;
+            }
+            
+            .card-front, .card-back {
+                font-size: 48px;
+            }
+            
+            .symbol-selector {
+                width: 50px;
+                height: 50px;
+                font-size: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 进度条 -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+            <div class="progress-block"></div>
+        </div>
+    </div>
+    
+    <!-- 游戏主容器 -->
+    <div class="game-container">
+        <!-- 卡片区域 -->
+        <div class="cards-container">
+            <div class="card" id="card1">
+                <div class="card-back">?</div>
+                <div class="card-front"></div>
+            </div>
+            
+            <div class="symbol-selector" id="symbolSelector">?</div>
+            
+            <div class="card" id="card2">
+                <div class="card-back">?</div>
+                <div class="card-front"></div>
+            </div>
+        </div>
+        
+        <!-- 按钮区域 -->
+        <div class="buttons-container">
+            <button class="button flip-button" id="flipButton">翻转卡片</button>
+            <button class="button submit-button" id="submitButton" disabled>提交答案</button>
+        </div>
+    </div>
+    
+    <!-- 结算弹窗 -->
+    <div class="result-modal" id="resultModal">
+        <div class="result-content">
+            <h2>恭喜通关！</h2>
+            <button class="button reset-button" id="restartButton">再来一次</button>
+        </div>
+    </div>
+    
+    <!-- 粒子动画容器 -->
+    <div id="particles-container"></div>
+    
+    <!-- 音效元素 -->
+    <audio id="flipSound" src="翻书.mp3"></audio>
+    <audio id="correctSound" src="得分.mp3"></audio>
+    <audio id="wrongSound" src="错误.mp3"></audio>
+    <audio id="winSound" src="通关.mp3"></audio>
+    
+    <script>
+        // 获取DOM元素
+        const card1 = document.getElementById('card1');
+        const card2 = document.getElementById('card2');
+        const flipButton = document.getElementById('flipButton');
+        const submitButton = document.getElementById('submitButton');
+        const symbolSelector = document.getElementById('symbolSelector');
+        const progressBar = document.getElementById('progressBar');
+        const progressBlocks = progressBar.querySelectorAll('.progress-block');
+        const resultModal = document.getElementById('resultModal');
+        const restartButton = document.getElementById('restartButton');
+        const particlesContainer = document.getElementById('particles-container');
+        
+        // 音效元素
+        const flipSound = document.getElementById('flipSound');
+        const correctSound = document.getElementById('correctSound');
+        const wrongSound = document.getElementById('wrongSound');
+        const winSound = document.getElementById('winSound');
+        
+        // 游戏状态
+        let cardValues = [0, 0];
+        let isFlipped = false;
+        let currentSymbolIndex = 0;
+        const symbols = ['<', '=', '>'];
+        let progress = 0;
+        const maxProgress = 10;
+        
+        // 图形类型
+        const shapes = ['circle', 'square', 'triangle', 'heart'];
+        
+        // 初始化进度条
+        function initProgressBar() {
+            progressBlocks.forEach(block => block.classList.remove('filled'));
+        }
+        
+        // 更新进度条
+        function updateProgressBar() {
+            progressBlocks.forEach((block, index) => {
+                if (index < progress) {
+                    block.classList.add('filled');
+                } else {
+                    block.classList.remove('filled');
+                }
+            });
+        }
+        
+        // 随机生成1-5的数字
+        function generateRandomNumber() {
+            return Math.floor(Math.random() * 5) + 1;
+        }
+        
+        // 绘制卡片内容（数字或图形）
+        function drawCardContent(cardElement, value) {
+            const frontElement = cardElement.querySelector('.card-front');
+            frontElement.innerHTML = '';
+            
+            // 随机决定是显示数字还是图形
+            const showNumber = Math.random() > 0.5;
+            
+            if (showNumber) {
+                // 显示数字
+                frontElement.textContent = value;
+                // 随机背景色
+                const colors = ['#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                frontElement.style.background = `linear-gradient(135deg, ${randomColor} 0%, ${randomColor.replace('0%', '30%')} 100%)`;
+            } else {
+                // 显示图形
+                frontElement.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                frontElement.style.fontSize = '48px';
+                
+                // 根据随机选择的图形类型生成多个图形
+                const shapeType = shapes[Math.floor(Math.random() * shapes.length)];
+                
+                // 计算网格布局，使图形整齐排列不重叠
+                const padding = 20; // 内边距
+                const maxSize = 60; // 最大图形尺寸
+                
+                // 根据值计算合适的行数和列数
+                let rows, cols;
+                if (value <= 3) {
+                    rows = 1;
+                    cols = value;
+                } else if (value <= 6) {
+                    rows = 2;
+                    cols = Math.ceil(value / 2);
+                } else {
+                    rows = 3;
+                    cols = Math.ceil(value / 3);
+                }
+                
+                // 计算每个图形的尺寸
+                const availableWidth = frontElement.offsetWidth - (padding * 2);
+                const availableHeight = frontElement.offsetHeight - (padding * 2);
+                const size = Math.min(maxSize, availableWidth / cols, availableHeight / rows);
+                
+                // 计算起始位置，使整个网格居中
+                const startX = (frontElement.offsetWidth - (size * cols)) / 2;
+                const startY = (frontElement.offsetHeight - (size * rows)) / 2;
+                
+                for (let i = 0; i < value; i++) {
+                    const shape = document.createElement('div');
+                    shape.style.position = 'absolute';
+                    
+                    // 计算网格位置
+                    const row = Math.floor(i / cols);
+                    const col = i % cols;
+                    const x = startX + (col * size);
+                    const y = startY + (row * size);
+                    
+                    shape.style.left = `${x}px`;
+                    shape.style.top = `${y}px`;
+                    shape.style.width = `${size}px`;
+                    shape.style.height = `${size}px`;
+                    shape.style.color = 'white';
+                    shape.style.display = 'flex';
+                    shape.style.alignItems = 'center';
+                    shape.style.justifyContent = 'center';
+                    shape.style.fontSize = `${size * 0.8}px`; // 字体大小为图形大小的80%
+                    
+                    // 根据图形类型设置内容
+                    switch (shapeType) {
+                        case 'circle':
+                            shape.textContent = '●';
+                            break;
+                        case 'square':
+                            shape.textContent = '■';
+                            break;
+                        case 'triangle':
+                            shape.textContent = '▲';
+                            break;
+                        case 'heart':
+                            shape.textContent = '♥';
+                            break;
+                    }
+                    
+                    frontElement.appendChild(shape);
+                }
+            }
+        }
+        
+        // 翻转卡片
+        function flipCards() {
+            if (!isFlipped) {
+                // 播放翻书音效
+                flipSound.currentTime = 0;
+                flipSound.play();
+                
+                // 生成随机数字
+                cardValues[0] = generateRandomNumber();
+                cardValues[1] = generateRandomNumber();
+                
+                // 绘制卡片内容
+                drawCardContent(card1, cardValues[0]);
+                drawCardContent(card2, cardValues[1]);
+                
+                // 添加翻转类
+                setTimeout(() => {
+                    card1.classList.add('flipped');
+                    card2.classList.add('flipped');
+                    isFlipped = true;
+                    submitButton.disabled = false;
+                }, 100);
+            }
+        }
+        
+        // 重置卡片
+        function resetCards() {
+            card1.classList.remove('flipped');
+            card2.classList.remove('flipped');
+            symbolSelector.textContent = '?';
+            currentSymbolIndex = 0;
+            isFlipped = false;
+            submitButton.disabled = true;
+        }
+        
+        // 选择比较符号
+        function selectSymbol() {
+            if (isFlipped) {
+                currentSymbolIndex = (currentSymbolIndex + 1) % symbols.length;
+                symbolSelector.textContent = symbols[currentSymbolIndex];
+            }
+        }
+        
+        // 检查答案
+        function checkAnswer() {
+            if (isFlipped) {
+                const symbol = symbols[currentSymbolIndex];
+                let isCorrect = false;
+                
+                // 判断答案是否正确
+                if (symbol === '<' && cardValues[0] < cardValues[1]) {
+                    isCorrect = true;
+                } else if (symbol === '=' && cardValues[0] === cardValues[1]) {
+                    isCorrect = true;
+                } else if (symbol === '>' && cardValues[0] > cardValues[1]) {
+                    isCorrect = true;
+                }
+                
+                // 根据结果更新进度条和播放音效
+                if (isCorrect) {
+                    correctSound.currentTime = 0;
+                    correctSound.play();
+                    progress = Math.min(progress + 1, maxProgress);
+                } else {
+                    wrongSound.currentTime = 0;
+                    wrongSound.play();
+                    progress = Math.max(progress - 1, 0);
+                }
+                
+                // 更新进度条
+                updateProgressBar();
+                
+                // 检查是否通关
+                if (progress === maxProgress) {
+                    showWinAnimation();
+                }
+                
+                // 延迟后重置卡片
+                setTimeout(resetCards, 500);
+            }
+        }
+        
+        // 显示通关动画
+        function showWinAnimation() {
+            // 播放通关音效
+            winSound.currentTime = 0;
+            winSound.play();
+            
+            // 显示粒子动画
+            createParticles();
+            particlesContainer.style.display = 'block';
+            
+            // 显示结算弹窗
+            setTimeout(() => {
+                resultModal.style.display = 'flex';
+            }, 1500);
+        }
+        
+        // 创建粒子动画
+        function createParticles() {
+            particlesContainer.innerHTML = '';
+            const particleCount = 100;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                
+                // 随机位置和样式
+                const size = Math.random() * 10 + 5;
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                const color = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][Math.floor(Math.random() * 5)];
+                const delay = Math.random() * 2;
+                const duration = Math.random() * 3 + 2;
+                
+                particle.style.position = 'absolute';
+                particle.style.left = `${x}%`;
+                particle.style.top = `${y}%`;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.backgroundColor = color;
+                particle.style.borderRadius = '50%';
+                particle.style.animation = `particleFloat ${duration}s ease ${delay}s infinite`;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // 重新开始游戏
+        function restartGame() {
+            progress = 0;
+            updateProgressBar();
+            resetCards();
+            resultModal.style.display = 'none';
+            particlesContainer.style.display = 'none';
+        }
+        
+        // 添加粒子浮动动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes particleFloat {
+                0% {
+                    transform: translateY(0) rotate(0deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(-100px) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // 添加事件监听
+        flipButton.addEventListener('click', flipCards);
+        submitButton.addEventListener('click', checkAnswer);
+        symbolSelector.addEventListener('click', selectSymbol);
+        restartButton.addEventListener('click', restartGame);
+        
+        // 触屏支持
+        symbolSelector.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            selectSymbol();
+        });
+        
+        flipButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            flipCards();
+        });
+        
+        submitButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            checkAnswer();
+        });
+        
+        restartButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            restartGame();
+        });
+        
+        // 初始化游戏
+        initProgressBar();
+    </script>
+    
+    <!-- 游戏规则说明 -->
+    <div class="rules-container">
+        <div class="rules-content">
+            <h3>游戏规则</h3>
+            <ul>
+                <li>点击「翻转卡片」按钮查看两张卡片上的数字或图形</li>
+                <li>点击中间的符号选择器选择「<」、「=」或「>」来比较两张卡片的大小</li>
+                <li>点击「提交答案」按钮确认你的选择</li>
+                <li>答对后进度条前进一格，答错后退一格</li>
+                <li>进度条填满10格即可通关！</li>
+            </ul>
+        </div>
+    </div>
+    
+    <style>
+        /* 规则说明样式 */
+        .rules-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            border-top: 3px solid #4CAF50;
+        }
+        
+        .rules-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .rules-content h3 {
+            color: #4CAF50;
+            font-size: 20px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .rules-content ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .rules-content li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .rules-content li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        /* 响应式规则说明 */
+        @media (max-width: 768px) {
+            .rules-content h3 {
+                font-size: 18px;
+            }
+            
+            .rules-content li {
+                font-size: 14px;
+            }
+        }
+    </style>
+</body>
+</html>
